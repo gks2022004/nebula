@@ -1,0 +1,10 @@
+{
+  "_format": "mm-dd-yyyy",
+  "20250105000000_init": {
+    "id": "20250105000000_init",
+    "name": "init",
+    "appliedStepsCount": 1,
+    "logs": "Initial migration",
+    "checksum": "init"
+  }
+}
