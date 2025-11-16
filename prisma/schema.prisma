@@ -1,0 +1,147 @@
+// Prisma Schema for Nebula Live Streaming Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  username      String    @unique
+  name          String?
+  password      String
+  avatar        String?
+  bio           String?
+  isStreamer    Boolean   @default(false)
+  isModerator   Boolean   @default(false)
+  isAdmin       Boolean   @default(false)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  streams       Stream[]
+  followers     Follow[]  @relation("Following")
+  following     Follow[]  @relation("Followers")
+  chatMessages  ChatMessage[]
+  notifications Notification[]
+  
+  @@index([email])
+  @@index([username])
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+  
+  follower    User     @relation("Followers", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+  
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+model Stream {
+  id              String   @id @default(cuid())
+  title           String
+  description     String?
+  thumbnailUrl    String?
+  streamKey       String   @unique
+  isLive          Boolean  @default(false)
+  viewerCount     Int      @default(0)
+  peakViewers     Int      @default(0)
+  category        String?
+  tags            String[]
+  
+  streamerId      String
+  streamer        User     @relation(fields: [streamerId], references: [id], onDelete: Cascade)
+  
+  startedAt       DateTime?
+  endedAt         DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  chatMessages    ChatMessage[]
+  analytics       StreamAnalytics[]
+  recordings      Recording[]
+  
+  @@index([streamerId])
+  @@index([isLive])
+  @@index([createdAt])
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  content   String
+  isDeleted Boolean  @default(false)
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  streamId  String
+  stream    Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  
+  @@index([streamId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model StreamAnalytics {
+  id              String   @id @default(cuid())
+  streamId        String
+  stream          Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  
+  viewerCount     Int
+  chatMessages    Int      @default(0)
+  uniqueViewers   Int      @default(0)
+  averageViewTime Int      @default(0) // in seconds
+  
+  timestamp       DateTime @default(now())
+  
+  @@index([streamId])
+  @@index([timestamp])
+}
+
+model Recording {
+  id          String   @id @default(cuid())
+  streamId    String
+  stream      Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  
+  s3Key       String
+  s3Url       String
+  duration    Int      // in seconds
+  fileSize    BigInt   // in bytes
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([streamId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type      String   // 'stream_live', 'new_follower', etc.
+  title     String
+  message   String
+  link      String?
+  isRead    Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
