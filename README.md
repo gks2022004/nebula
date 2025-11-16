@@ -1,29 +1,29 @@
-# 🌌 Nebula - Modern Real-Time Live Streaming Platform
+# Nebula - Modern Real-Time Live Streaming Platform
 
-> ✅ **Status**: All errors fixed! Ready to run. See [SUMMARY.md](SUMMARY.md) for details.
+> **Status**: All errors fixed! Ready to run. See [SUMMARY.md](SUMMARY.md) for details.
 
 A scalable, ultra-low-latency live streaming platform built with a hybrid architecture combining the best of TypeScript, Go, and Python.
 
-## 📚 Quick Links
+## Quick Links
 
-- **[🚀 Quick Start Guide](QUICKSTART.md)** - Get started in minutes
-- **[📋 Quick Reference](QUICKREF.md)** - Common commands and URLs
-- **[✅ Status Report](STATUS.md)** - What's fixed and troubleshooting
-- **[📖 Summary](SUMMARY.md)** - Complete fix summary
-- **[🏗️ Architecture](docs/ARCHITECTURE.md)** - System design
-- **[🛠️ Development Guide](docs/DEVELOPMENT.md)** - Detailed workflows
+- **[Quick Start Guide](QUICKSTART.md)** - Get started in minutes
+- **[Quick Reference](QUICKREF.md)** - Common commands and URLs
+- **[Status Report](STATUS.md)** - What's fixed and troubleshooting
+- **[Summary](SUMMARY.md)** - Complete fix summary
+- **[Architecture](docs/ARCHITECTURE.md)** - System design
+- **[Development Guide](docs/DEVELOPMENT.md)** - Detailed workflows
 
-## 🚀 Features
+## Features
 
-- **🎥 Live Video Streaming**: WebRTC-based ultra-low-latency streaming
-- **💬 Real-Time Chat**: Interactive chat rooms with WebSocket
-- **👥 User System**: Authentication, profiles, follow system
-- **📊 Live Analytics**: Real-time viewer counts and engagement metrics
-- **🔐 Moderation Tools**: Chat moderation, rate limiting, logging
-- **📹 Stream Recording**: Automatic recording with S3 storage
-- **🎯 Smart Notifications**: Followers notified when streamers go live
+- **Live Video Streaming**: WebRTC-based ultra-low-latency streaming
+- **Real-Time Chat**: Interactive chat rooms with WebSocket
+- **User System**: Authentication, profiles, follow system
+- **Live Analytics**: Real-time viewer counts and engagement metrics
+- **Moderation Tools**: Chat moderation, rate limiting, logging
+- **Stream Recording**: Automatic recording with S3 storage
+- **Smart Notifications**: Followers notified when streamers go live
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────────────────────── Frontend (Next.js) ───────────────────────────────┐
@@ -33,9 +33,9 @@ A scalable, ultra-low-latency live streaming platform built with a hybrid archit
                                           |
                ┌──────────────────────────────────────────────────────┐
                |                  Nest.js Backend                     |
-               |---------------------------------------------------- |
-               | Auth | Streams | Chat WS | Workers | Moderation     |
-               └────────────┬─────────────────┬─────────────────────┘
+               |------------------------------------------------------|
+               | Auth | Streams | Chat WS | Workers | Moderation      |
+               └────────────┬─────────────────┬────────────────────--─┘
                             |                 |
                             ▼                 ▼
                     PostgreSQL            Redis (PubSub + Cache)
@@ -53,7 +53,7 @@ A scalable, ultra-low-latency live streaming platform built with a hybrid archit
                     CloudFront CDN
 ```
 
-## 📦 Tech Stack
+## Tech Stack
 
 | Component      | Technology                 |
 | -------------- | -------------------------- |
@@ -82,7 +82,7 @@ nebula/
 └── package.json          # Monorepo workspace configuration
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -206,24 +206,4 @@ NEXT_PUBLIC_WS_URL=ws://localhost:3000
 NEXT_PUBLIC_MEDIA_SERVER_URL=http://localhost:8080
 ```
 
-## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
-## 🙏 Acknowledgments
-
-Built with ❤️ using amazing open-source technologies:
-
-- [Nest.js](https://nestjs.com/)
-- [Next.js](https://nextjs.org/)
-- [Pion WebRTC](https://pion.ly/)
-- [Prisma](https://www.prisma.io/)
-- [Redis](https://redis.io/)
-
----
-
-**Made with 🌌 by the Nebula Team**
