@@ -1,7 +1,5 @@
 # Nebula - Modern Real-Time Live Streaming Platform
 
-> **Status**: All errors fixed! Ready to run. See [SUMMARY.md](SUMMARY.md) for details.
-
 A scalable, ultra-low-latency live streaming platform built with a hybrid architecture combining the best of TypeScript, Go, and Python.
 
 ## Quick Links
