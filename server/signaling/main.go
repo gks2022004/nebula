@@ -77,6 +77,8 @@ func (s *SignalingServer) handleBroadcaster(w http.ResponseWriter, r *http.Reque
 	vars := mux.Vars(r)
 	streamID := vars["streamId"]
 
+	log.Printf("Broadcaster connecting for stream: %s", streamID)
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if (err != nil) {
 		log.Println("Upgrade error:", err)
@@ -96,6 +98,8 @@ func (s *SignalingServer) handleBroadcaster(w http.ResponseWriter, r *http.Reque
 	room.Broadcaster = client
 	room.mu.Unlock()
 
+	log.Printf("Broadcaster connected for stream: %s", streamID)
+
 	go s.writePump(client)
 	s.readPump(client, room)
 }
@@ -104,6 +108,8 @@ func (s *SignalingServer) handleViewer(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	streamID := vars["streamId"]
 	viewerID := vars["viewerId"]
+
+	log.Printf("Viewer %s connecting to stream: %s", viewerID, streamID)
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -124,6 +130,8 @@ func (s *SignalingServer) handleViewer(w http.ResponseWriter, r *http.Request) {
 	room.Viewers[viewerID] = client
 	room.mu.Unlock()
 
+	log.Printf("Viewer %s connected to stream: %s", viewerID, streamID)
+
 	// Notify broadcaster about new viewer
 	if room.Broadcaster != nil {
 		msg := Message{
@@ -132,6 +140,9 @@ func (s *SignalingServer) handleViewer(w http.ResponseWriter, r *http.Request) {
 		}
 		data, _ := json.Marshal(msg)
 		room.Broadcaster.Send <- data
+		log.Printf("Notified broadcaster about viewer: %s", viewerID)
+	} else {
+		log.Printf("No broadcaster for stream: %s", streamID)
 	}
 
 	go s.writePump(client)
@@ -141,6 +152,8 @@ func (s *SignalingServer) handleViewer(w http.ResponseWriter, r *http.Request) {
 func (s *SignalingServer) handleChat(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	streamID := vars["streamId"]
+
+	log.Printf("Chat client connecting to stream: %s", streamID)
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -159,7 +172,10 @@ func (s *SignalingServer) handleChat(w http.ResponseWriter, r *http.Request) {
 	room := s.getOrCreateRoom(streamID)
 	room.mu.Lock()
 	room.ChatClients[clientID] = client
+	chatCount := len(room.ChatClients)
 	room.mu.Unlock()
+
+	log.Printf("Chat client %s connected to stream %s (total: %d)", clientID, streamID, chatCount)
 
 	go s.writePump(client)
 	s.readChatPump(client, room)
@@ -191,7 +207,9 @@ func (s *SignalingServer) readChatPump(client *Client, room *StreamRoom) {
 		client.Conn.Close()
 		room.mu.Lock()
 		delete(room.ChatClients, client.ID)
+		chatCount := len(room.ChatClients)
 		room.mu.Unlock()
+		log.Printf("Chat client %s disconnected from stream %s (remaining: %d)", client.ID, client.StreamID, chatCount)
 	}()
 
 	for {
@@ -199,6 +217,8 @@ func (s *SignalingServer) readChatPump(client *Client, room *StreamRoom) {
 		if err != nil {
 			break
 		}
+
+		log.Printf("Broadcasting chat message in stream %s to %d clients", client.StreamID, len(room.ChatClients))
 
 		// Broadcast chat message to all clients in the room
 		room.mu.RLock()
@@ -229,23 +249,39 @@ func (s *SignalingServer) handleSignalingMessage(client *Client, room *StreamRoo
 	room.mu.RLock()
 	defer room.mu.RUnlock()
 
+	log.Printf("Received %s message from %s (broadcaster: %v)", msg.Type, client.ID, client.IsBroadcaster)
+
 	switch msg.Type {
 	case "offer":
 		if viewer, exists := room.Viewers[msg.ViewerID]; exists {
 			data, _ := json.Marshal(msg)
 			viewer.Send <- data
+			log.Printf("Sent offer to viewer: %s", msg.ViewerID)
 		}
 	case "answer":
+		// Viewer sending answer to broadcaster
 		if room.Broadcaster != nil {
+			// Add viewerId to the message
+			msg.ViewerID = client.ID
 			data, _ := json.Marshal(msg)
 			room.Broadcaster.Send <- data
+			log.Printf("Sent answer from viewer %s to broadcaster", client.ID)
 		}
 	case "ice-candidate":
 		var target *Client
 		if client.IsBroadcaster {
+			// Broadcaster sending ICE candidate to viewer
 			target = room.Viewers[msg.ViewerID]
+			if target != nil {
+				log.Printf("Sending ICE candidate from broadcaster to viewer: %s", msg.ViewerID)
+			}
 		} else {
+			// Viewer sending ICE candidate to broadcaster
+			msg.ViewerID = client.ID
 			target = room.Broadcaster
+			if target != nil {
+				log.Printf("Sending ICE candidate from viewer %s to broadcaster", client.ID)
+			}
 		}
 		if target != nil {
 			data, _ := json.Marshal(msg)

@@ -72,23 +72,39 @@ export function Broadcaster({ streamId, onStart, onStop }: BroadcasterProps) {
     const signalingUrl = process.env.NEXT_PUBLIC_SIGNALING_SERVER_URL || 'ws://localhost:8080'
     const ws = new WebSocket(`${signalingUrl}/broadcast/${streamId}`)
 
+    ws.onopen = () => {
+      console.log('Broadcaster connected to signaling server')
+    }
+
     ws.onmessage = async (event) => {
       const message = JSON.parse(event.data)
+      console.log('Broadcaster received message:', message.type)
 
       switch (message.type) {
         case 'viewer-joined':
+          console.log('Viewer joined:', message.viewerId)
           await createPeerConnection(message.viewerId, stream, ws)
           break
         case 'answer':
+          console.log('Received answer from viewer:', message.viewerId)
           await handleAnswer(message.viewerId, message.sdp)
           break
         case 'ice-candidate':
           await handleIceCandidate(message.viewerId, message.candidate)
           break
         case 'viewer-left':
+          console.log('Viewer left:', message.viewerId)
           closePeerConnection(message.viewerId)
           break
       }
+    }
+
+    ws.onerror = (error) => {
+      console.error('Broadcaster WebSocket error:', error)
+    }
+
+    ws.onclose = () => {
+      console.log('Broadcaster disconnected from signaling server')
     }
   }
 

@@ -4,9 +4,10 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
+    const { userId } = await params
     const session = await auth()
     
     if (!session?.user) {
@@ -16,7 +17,7 @@ export async function POST(
       )
     }
 
-    if (params.userId === session.user.id) {
+    if (userId === session.user.id) {
       return NextResponse.json(
         { error: 'Cannot follow yourself' },
         { status: 400 }
@@ -27,7 +28,7 @@ export async function POST(
       where: {
         followerId_followingId: {
           followerId: session.user.id,
-          followingId: params.userId
+          followingId: userId
         }
       }
     })
@@ -42,14 +43,14 @@ export async function POST(
     const follow = await prisma.follow.create({
       data: {
         followerId: session.user.id,
-        followingId: params.userId
+        followingId: userId
       }
     })
 
     // Create notification
     await prisma.notification.create({
       data: {
-        userId: params.userId,
+        userId: userId,
         type: 'new_follower',
         title: 'New Follower',
         message: `${session.user?.name || 'Someone'} started following you`,
@@ -69,9 +70,10 @@ export async function POST(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
+    const { userId } = await params
     const session = await auth()
     
     if (!session?.user) {
@@ -85,7 +87,7 @@ export async function DELETE(
       where: {
         followerId_followingId: {
           followerId: session.user.id,
-          followingId: params.userId
+          followingId: userId
         }
       }
     })

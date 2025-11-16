@@ -4,11 +4,12 @@ import { auth } from '@/auth'
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const stream = await prisma.stream.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         streamer: {
           select: {
@@ -42,9 +43,10 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await auth()
     
     if (!session?.user) {
@@ -55,7 +57,7 @@ export async function PATCH(
     }
 
     const stream = await prisma.stream.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!stream) {
@@ -75,7 +77,7 @@ export async function PATCH(
     const data = await req.json()
     
     const updatedStream = await prisma.stream.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...data,
         updatedAt: new Date()
@@ -104,9 +106,10 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await auth()
     
     if (!session?.user) {
@@ -117,7 +120,7 @@ export async function DELETE(
     }
 
     const stream = await prisma.stream.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!stream) {
@@ -138,7 +141,7 @@ export async function DELETE(
     }
 
     await prisma.stream.delete({
-      where: { id: params.id }
+      where: { id }
     })
 
     return NextResponse.json({ success: true })

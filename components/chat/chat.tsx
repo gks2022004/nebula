@@ -67,29 +67,44 @@ export function Chat({ streamId }: ChatProps) {
       setTimeout(connectToChat, 3000)
     }
 
-    ws.onerror = (error) => {
-      console.error('Chat error:', error)
+    ws.onerror = () => {
+      // WebSocket connection error - will attempt to reconnect
+      console.warn('Chat WebSocket connection error - attempting to reconnect...')
     }
   }
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!newMessage.trim() || !session?.user) return
+    if (!newMessage.trim() || !session?.user) {
+      console.log('Cannot send message:', { hasMessage: !!newMessage.trim(), hasSession: !!session?.user })
+      return
+    }
 
     const message = {
       type: 'chat-message',
       streamId,
-      userId: session.user.id,
-      username: session.user.username,
-      avatar: session.user.image,
+      user: {
+        id: session.user.id,
+        username: session.user.username || session.user.name || 'User',
+        name: session.user.name || session.user.username || 'User',
+        avatar: session.user.image || null,
+        isModerator: false
+      },
       content: newMessage.trim(),
-      createdAt: new Date()
+      createdAt: new Date().toISOString()
     }
+
+    console.log('Sending chat message:', message)
+    console.log('WebSocket state:', wsRef.current?.readyState)
 
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(message))
+      console.log('Message sent via WebSocket')
+      // Don't add optimistically - wait for broadcast from server
       setNewMessage('')
+    } else {
+      console.error('WebSocket not open. State:', wsRef.current?.readyState)
     }
   }
 

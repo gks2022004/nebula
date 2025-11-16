@@ -4,9 +4,10 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await auth()
     
     if (!session?.user) {
@@ -17,7 +18,7 @@ export async function POST(
     }
 
     const stream = await prisma.stream.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!stream) {
@@ -35,7 +36,7 @@ export async function POST(
     }
 
     const updatedStream = await prisma.stream.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         isLive: true,
         startedAt: new Date(),

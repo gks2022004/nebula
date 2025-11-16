@@ -31,14 +31,16 @@ export function Viewer({ streamId, viewerId }: ViewerProps) {
     wsRef.current = ws
 
     ws.onopen = () => {
-      console.log('Connected to signaling server')
+      console.log('Viewer connected to signaling server for stream:', streamId)
     }
 
     ws.onmessage = async (event) => {
       const message = JSON.parse(event.data)
+      console.log('Viewer received message:', message.type)
 
       switch (message.type) {
         case 'offer':
+          console.log('Received offer from broadcaster')
           await handleOffer(message.sdp, ws)
           break
         case 'ice-candidate':
@@ -48,12 +50,12 @@ export function Viewer({ streamId, viewerId }: ViewerProps) {
     }
 
     ws.onerror = (error) => {
-      console.error('WebSocket error:', error)
+      console.error('Viewer WebSocket error:', error)
       setIsConnecting(false)
     }
 
     ws.onclose = () => {
-      console.log('Disconnected from signaling server')
+      console.log('Viewer disconnected from signaling server')
       setIsConnected(false)
     }
   }
@@ -70,6 +72,7 @@ export function Viewer({ streamId, viewerId }: ViewerProps) {
     setPeerConnection(pc)
 
     pc.ontrack = (event) => {
+      console.log('Received track from broadcaster:', event.streams[0])
       if (videoRef.current && event.streams[0]) {
         videoRef.current.srcObject = event.streams[0]
         setIsConnecting(false)
@@ -79,6 +82,7 @@ export function Viewer({ streamId, viewerId }: ViewerProps) {
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
+        console.log('Sending ICE candidate to broadcaster')
         ws.send(JSON.stringify({
           type: 'ice-candidate',
           candidate: event.candidate
@@ -93,22 +97,33 @@ export function Viewer({ streamId, viewerId }: ViewerProps) {
         setIsConnecting(false)
       } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
         setIsConnected(false)
+        console.log('Connection failed or disconnected')
       }
     }
 
-    await pc.setRemoteDescription(new RTCSessionDescription(sdp))
-    const answer = await pc.createAnswer()
-    await pc.setLocalDescription(answer)
+    try {
+      await pc.setRemoteDescription(new RTCSessionDescription(sdp))
+      const answer = await pc.createAnswer()
+      await pc.setLocalDescription(answer)
 
-    ws.send(JSON.stringify({
-      type: 'answer',
-      sdp: answer
-    }))
+      console.log('Sending answer to broadcaster')
+      ws.send(JSON.stringify({
+        type: 'answer',
+        sdp: answer
+      }))
+    } catch (error) {
+      console.error('Error handling offer:', error)
+    }
   }
 
   const handleIceCandidate = async (candidate: RTCIceCandidateInit) => {
     if (peerConnection) {
-      await peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
+      try {
+        await peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
+        console.log('Added ICE candidate from broadcaster')
+      } catch (error) {
+        console.error('Error adding ICE candidate:', error)
+      }
     }
   }
 
