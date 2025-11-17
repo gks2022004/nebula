@@ -21,7 +21,7 @@ export function StreamCard({ stream }: StreamCardProps) {
       whileHover={{ scale: 1.02 }}
       className="group"
     >
-      <Link href={`/stream/${stream.id}`}>
+      <Link href={`/stream/${stream.streamer?.username || stream.streamerId}`}>
         <div className="glass-dark rounded-xl overflow-hidden cursor-pointer">
           <div className="relative aspect-video bg-gradient-to-br from-purple-900 to-pink-900">
             {stream.thumbnailUrl ? (

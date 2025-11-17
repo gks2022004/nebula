@@ -15,8 +15,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="font-mono">
+    <html lang="en" suppressHydrationWarning>
+      <body className="font-mono" suppressHydrationWarning>
         <Providers>
           <div className="min-h-screen bg-[#0a0a0a]">
             <Navbar />

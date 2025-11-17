@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -30,11 +32,11 @@ type Message struct {
 }
 
 type Client struct {
-	ID         string
-	StreamID   string
-	Conn       *websocket.Conn
+	ID            string
+	StreamID      string
+	Conn          *websocket.Conn
 	IsBroadcaster bool
-	Send       chan []byte
+	Send          chan []byte
 }
 
 type StreamRoom struct {
@@ -80,7 +82,7 @@ func (s *SignalingServer) handleBroadcaster(w http.ResponseWriter, r *http.Reque
 	log.Printf("Broadcaster connecting for stream: %s", streamID)
 
 	conn, err := upgrader.Upgrade(w, r, nil)
-	if (err != nil) {
+	if err != nil {
 		log.Println("Upgrade error:", err)
 		return
 	}
@@ -218,19 +220,31 @@ func (s *SignalingServer) readChatPump(client *Client, room *StreamRoom) {
 			break
 		}
 
-		log.Printf("Broadcasting chat message in stream %s to %d clients", client.StreamID, len(room.ChatClients))
-
-		// Broadcast chat message to all clients in the room
 		room.mu.RLock()
-		for _, chatClient := range room.ChatClients {
+		clientCount := len(room.ChatClients)
+		room.mu.RUnlock()
+
+		log.Printf("Received message from client %s in stream %s (total clients: %d)", client.ID, client.StreamID, clientCount)
+		log.Printf("Broadcasting chat message in stream %s to %d clients", client.StreamID, clientCount)
+
+		// Broadcast chat message to all clients in the room (including sender)
+		room.mu.Lock()
+		successCount := 0
+		for clientID, chatClient := range room.ChatClients {
 			select {
 			case chatClient.Send <- message:
+				// Message sent successfully
+				log.Printf("  -> Sent to client %s", clientID)
+				successCount++
 			default:
+				// Channel full, close and mark for deletion
+				log.Printf("  -> Chat client %s channel full, removing", clientID)
 				close(chatClient.Send)
-				delete(room.ChatClients, chatClient.ID)
+				delete(room.ChatClients, clientID)
 			}
 		}
-		room.mu.RUnlock()
+		room.mu.Unlock()
+		log.Printf("Successfully broadcast to %d/%d clients", successCount, clientCount)
 	}
 }
 
@@ -322,12 +336,12 @@ func generateClientID() string {
 }
 
 func randomString(n int) string {
-	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letters[i%len(letters)]
+	bytes := make([]byte, n)
+	if _, err := rand.Read(bytes); err != nil {
+		// Fallback to timestamp-based ID if random fails
+		return hex.EncodeToString([]byte(string(rune(len(bytes)))))
 	}
-	return string(b)
+	return hex.EncodeToString(bytes)
 }
 
 func enableCORS(next http.Handler) http.Handler {

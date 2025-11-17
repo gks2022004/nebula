@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Stream, User } from '@/types'
 import { Broadcaster } from '@/components/streaming/broadcaster'
 import { Chat } from '@/components/chat/chat'
@@ -17,7 +17,13 @@ interface DashboardContentProps {
 
 export function DashboardContent({ stream: initialStream, user }: DashboardContentProps) {
   const [stream, setStream] = useState(initialStream)
+  const [streamUrl, setStreamUrl] = useState('')
   const { toast } = useToast()
+
+  useEffect(() => {
+    // Set URL on client side only to avoid hydration mismatch
+    setStreamUrl(`${window.location.origin}/stream/${stream.streamer?.username || stream.streamerId}`)
+  }, [stream.streamer?.username, stream.streamerId])
 
   const handleStart = async () => {
     try {
@@ -127,7 +133,7 @@ export function DashboardContent({ stream: initialStream, user }: DashboardConte
             <div>
               <p className="text-sm text-gray-400">Stream URL</p>
               <p className="text-white font-mono text-sm">
-                {typeof window !== 'undefined' ? window.location.origin : ''}/stream/{stream.id}
+                {streamUrl || 'Loading...'}
               </p>
             </div>
           </div>

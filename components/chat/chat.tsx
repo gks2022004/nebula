@@ -20,14 +20,30 @@ export function Chat({ streamId }: ChatProps) {
   const [isConnected, setIsConnected] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
+    // Cleanup any existing connection first
+    if (wsRef.current) {
+      wsRef.current.close()
+      wsRef.current = null
+    }
+    
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current)
+      reconnectTimeoutRef.current = null
+    }
+
     loadChatHistory()
     connectToChat()
 
     return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current)
+      }
       if (wsRef.current) {
         wsRef.current.close()
+        wsRef.current = null
       }
     }
   }, [streamId])
@@ -46,6 +62,12 @@ export function Chat({ streamId }: ChatProps) {
   }
 
   const connectToChat = () => {
+    // Don't create a new connection if one already exists and is open
+    if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
+      console.log('Chat WebSocket already connected or connecting')
+      return
+    }
+
     const chatUrl = process.env.NEXT_PUBLIC_SIGNALING_SERVER_URL || 'ws://localhost:8080'
     const ws = new WebSocket(`${chatUrl}/chat/${streamId}`)
     wsRef.current = ws
@@ -57,14 +79,30 @@ export function Chat({ streamId }: ChatProps) {
 
     ws.onmessage = (event) => {
       const message = JSON.parse(event.data)
-      setMessages(prev => [...prev, message])
+      // Prevent duplicate messages by checking if it already exists
+      setMessages(prev => {
+        // Check if message with same content and timestamp already exists
+        const isDuplicate = prev.some(m => 
+          m.content === message.content && 
+          m.user?.id === message.user?.id &&
+          Math.abs(new Date(m.createdAt).getTime() - new Date(message.createdAt).getTime()) < 1000
+        )
+        
+        if (isDuplicate) {
+          console.log('Duplicate message detected, skipping')
+          return prev
+        }
+        
+        return [...prev, message]
+      })
     }
 
     ws.onclose = () => {
       console.log('Disconnected from chat')
       setIsConnected(false)
+      wsRef.current = null
       // Attempt to reconnect after 3 seconds
-      setTimeout(connectToChat, 3000)
+      reconnectTimeoutRef.current = setTimeout(connectToChat, 3000)
     }
 
     ws.onerror = () => {
