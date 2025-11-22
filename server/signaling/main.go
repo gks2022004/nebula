@@ -101,7 +101,7 @@ func (s *SignalingServer) handleBroadcaster(w http.ResponseWriter, r *http.Reque
 		IsBroadcaster: true,
 		Send:          make(chan []byte, 512), // Increased buffer for high throughput
 	}
-	
+
 	// Set TCP_NODELAY for lower latency (disables Nagle's algorithm)
 	if tcpConn, ok := conn.UnderlyingConn().(*net.TCPConn); ok {
 		tcpConn.SetNoDelay(true)
@@ -138,7 +138,7 @@ func (s *SignalingServer) handleViewer(w http.ResponseWriter, r *http.Request) {
 		IsBroadcaster: false,
 		Send:          make(chan []byte, 512), // Increased buffer for high throughput
 	}
-	
+
 	// Set TCP_NODELAY for lower latency
 	if tcpConn, ok := conn.UnderlyingConn().(*net.TCPConn); ok {
 		tcpConn.SetNoDelay(true)
@@ -271,7 +271,7 @@ func (s *SignalingServer) writePump(client *Client) {
 	for message := range client.Send {
 		// Set write deadline for faster failure detection (reduces hanging)
 		// client.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-		
+
 		err := client.Conn.WriteMessage(websocket.TextMessage, message)
 		if err != nil {
 			break
