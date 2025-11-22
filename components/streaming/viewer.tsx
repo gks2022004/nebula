@@ -14,24 +14,40 @@ export function Viewer({ streamId, viewerId }: ViewerProps) {
   const [peerConnection, setPeerConnection] = useState<RTCPeerConnection | null>(null)
   const [isConnecting, setIsConnecting] = useState(true)
   const [isConnected, setIsConnected] = useState(false)
-  const [isMuted, setIsMuted] = useState(false)
+  const [isMuted, setIsMuted] = useState(true) // Start muted for autoplay
   const wsRef = useRef<WebSocket | null>(null)
+  const hasReceivedOfferRef = useRef(false)
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     connectToStream()
 
     return () => {
       cleanup()
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current)
+      }
     }
   }, [streamId, viewerId])
 
   const connectToStream = async () => {
     const signalingUrl = process.env.NEXT_PUBLIC_SIGNALING_SERVER_URL || 'ws://localhost:8080'
+    console.log('Viewer connecting to:', `${signalingUrl}/watch/${streamId}/${viewerId}`)
     const ws = new WebSocket(`${signalingUrl}/watch/${streamId}/${viewerId}`)
     wsRef.current = ws
 
     ws.onopen = () => {
       console.log('Viewer connected to signaling server for stream:', streamId)
+      setIsConnecting(true)
+      hasReceivedOfferRef.current = false
+      
+      // Set a timeout to detect if we don't receive an offer within 10 seconds
+      reconnectTimeoutRef.current = setTimeout(() => {
+        if (!hasReceivedOfferRef.current) {
+          console.log('No offer received within 10 seconds, broadcaster may not be ready')
+          setIsConnecting(false)
+        }
+      }, 10000)
     }
 
     ws.onmessage = async (event) => {
@@ -41,6 +57,10 @@ export function Viewer({ streamId, viewerId }: ViewerProps) {
       switch (message.type) {
         case 'offer':
           console.log('Received offer from broadcaster')
+          hasReceivedOfferRef.current = true
+          if (reconnectTimeoutRef.current) {
+            clearTimeout(reconnectTimeoutRef.current)
+          }
           await handleOffer(message.sdp, ws)
           break
         case 'ice-candidate':
@@ -50,7 +70,7 @@ export function Viewer({ streamId, viewerId }: ViewerProps) {
     }
 
     ws.onerror = (error) => {
-      console.error('Viewer WebSocket error:', error)
+      console.warn('Viewer WebSocket connection issue - this is normal during connection')
       setIsConnecting(false)
     }
 
@@ -79,10 +99,34 @@ export function Viewer({ streamId, viewerId }: ViewerProps) {
 
     pc.ontrack = (event) => {
       console.log('Received track from broadcaster:', event.streams[0])
+      console.log('Track details:', {
+        kind: event.track.kind,
+        id: event.track.id,
+        readyState: event.track.readyState,
+        enabled: event.track.enabled,
+        muted: event.track.muted
+      })
       if (videoRef.current && event.streams[0]) {
+        console.log('Setting video srcObject')
         videoRef.current.srcObject = event.streams[0]
         setIsConnecting(false)
         setIsConnected(true)
+        
+        // Wait for video metadata to load before playing
+        // Start muted to comply with browser autoplay policies
+        videoRef.current.onloadedmetadata = () => {
+          if (videoRef.current) {
+            videoRef.current.muted = true
+            videoRef.current.play()
+              .then(() => {
+                console.log('Video playing successfully')
+                // User can unmute using the controls
+              })
+              .catch(err => {
+                console.warn('Autoplay prevented, user interaction required:', err.message)
+              })
+          }
+        }
       }
     }
 
@@ -94,6 +138,10 @@ export function Viewer({ streamId, viewerId }: ViewerProps) {
           candidate: event.candidate
         }))
       }
+    }
+
+    pc.oniceconnectionstatechange = () => {
+      console.log('Viewer ICE connection state:', pc.iceConnectionState)
     }
 
     pc.onconnectionstatechange = () => {
@@ -109,9 +157,7 @@ export function Viewer({ streamId, viewerId }: ViewerProps) {
 
     try {
       await pc.setRemoteDescription(new RTCSessionDescription(sdp))
-      const answer = await pc.createAnswer({
-        voiceActivityDetection: false // Disable for lower latency
-      })
+      const answer = await pc.createAnswer()
       await pc.setLocalDescription(answer)
 
       console.log('Sending answer to broadcaster')

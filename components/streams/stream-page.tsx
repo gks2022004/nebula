@@ -13,13 +13,13 @@ import axios from 'axios'
 import { useToast } from '@/hooks/use-toast'
 
 interface StreamPageProps {
-  stream: Stream & { streamer: User }
+  stream: Stream & { streamer: User; isFollowing?: boolean }
 }
 
 export function StreamPage({ stream: initialStream }: StreamPageProps) {
   const { data: session } = useSession()
   const [stream, setStream] = useState(initialStream)
-  const [isFollowing, setIsFollowing] = useState(false)
+  const [isFollowing, setIsFollowing] = useState(initialStream.isFollowing || false)
   const { toast } = useToast()
 
   const handleFollow = async () => {

@@ -1,6 +1,7 @@
 import { getStreamByUsername } from "@/lib/stream-service";
 import { notFound } from "next/navigation";
 import { StreamPage } from "@/components/streams/stream-page";
+import { auth } from "@/auth";
 
 interface PageProps {
   params: Promise<{
@@ -10,7 +11,8 @@ interface PageProps {
 
 export default async function StreamByUsernamePage({ params }: PageProps) {
   const { username } = await params;
-  const stream = await getStreamByUsername(username);
+  const session = await auth();
+  const stream = await getStreamByUsername(username, session?.user?.id);
 
   if (!stream) {
     notFound();

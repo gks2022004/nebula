@@ -1,6 +1,6 @@
 import { prisma } from './prisma'
 
-export async function getStreamByUsername(username: string) {
+export async function getStreamByUsername(username: string, currentUserId?: string) {
   const user = await prisma.user.findUnique({
     where: { username },
     include: {
@@ -27,10 +27,26 @@ export async function getStreamByUsername(username: string) {
     return null
   }
 
-  return user.streams[0]
+  const stream = user.streams[0]
+
+  // Check if current user is following the streamer
+  let isFollowing = false
+  if (currentUserId && currentUserId !== stream.streamerId) {
+    const follow = await prisma.follow.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: currentUserId,
+          followingId: stream.streamerId
+        }
+      }
+    })
+    isFollowing = !!follow
+  }
+
+  return { ...stream, isFollowing }
 }
 
-export async function getStreamById(id: string) {
+export async function getStreamById(id: string, currentUserId?: string) {
   const stream = await prisma.stream.findUnique({
     where: { id },
     include: {
@@ -47,5 +63,23 @@ export async function getStreamById(id: string) {
     }
   })
 
-  return stream
+  if (!stream) {
+    return null
+  }
+
+  // Check if current user is following the streamer
+  let isFollowing = false
+  if (currentUserId && currentUserId !== stream.streamerId) {
+    const follow = await prisma.follow.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: currentUserId,
+          followingId: stream.streamerId
+        }
+      }
+    })
+    isFollowing = !!follow
+  }
+
+  return { ...stream, isFollowing }
 }

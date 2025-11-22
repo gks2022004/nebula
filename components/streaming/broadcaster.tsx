@@ -17,6 +17,7 @@ export function Broadcaster({ streamId, onStart, onStop }: BroadcasterProps) {
   const [videoEnabled, setVideoEnabled] = useState(true)
   const [audioEnabled, setAudioEnabled] = useState(true)
   const peerConnections = useRef<Map<string, RTCPeerConnection>>(new Map())
+  const wsRef = useRef<WebSocket | null>(null)
 
   useEffect(() => {
     return () => {
@@ -30,19 +31,13 @@ export function Broadcaster({ streamId, onStart, onStop }: BroadcasterProps) {
         video: {
           width: { ideal: 1280 },
           height: { ideal: 720 },
-          frameRate: { ideal: 30, max: 60 },
-          // Low latency settings
-          latency: { ideal: 0 },
-          // Prefer consistent quality over resolution
-          resizeMode: 'crop-and-scale'
+          frameRate: { ideal: 30, max: 60 }
         },
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
-          // Low latency audio
-          latency: { ideal: 0 },
-          sampleRate: { ideal: 48000 }
+          sampleRate: 48000
         }
       })
 
@@ -51,11 +46,11 @@ export function Broadcaster({ streamId, onStart, onStop }: BroadcasterProps) {
         videoRef.current.srcObject = stream
       }
 
+      // Connect to signaling server BEFORE marking stream as live
+      connectToSignalingServer(stream)
+      
       setIsStreaming(true)
       onStart?.()
-
-      // Connect to signaling server
-      connectToSignalingServer(stream)
     } catch (error) {
       console.error('Error starting stream:', error)
       alert('Failed to access camera/microphone')
@@ -71,6 +66,11 @@ export function Broadcaster({ streamId, onStart, onStop }: BroadcasterProps) {
     peerConnections.current.forEach(pc => pc.close())
     peerConnections.current.clear()
 
+    if (wsRef.current) {
+      wsRef.current.close()
+      wsRef.current = null
+    }
+
     setIsStreaming(false)
     onStop?.()
   }
@@ -78,9 +78,10 @@ export function Broadcaster({ streamId, onStart, onStop }: BroadcasterProps) {
   const connectToSignalingServer = (stream: MediaStream) => {
     const signalingUrl = process.env.NEXT_PUBLIC_SIGNALING_SERVER_URL || 'ws://localhost:8080'
     const ws = new WebSocket(`${signalingUrl}/broadcast/${streamId}`)
+    wsRef.current = ws
 
     ws.onopen = () => {
-      console.log('Broadcaster connected to signaling server')
+      console.log('Broadcaster connected to signaling server for stream:', streamId)
     }
 
     ws.onmessage = async (event) => {
@@ -139,6 +140,13 @@ export function Broadcaster({ streamId, onStart, onStop }: BroadcasterProps) {
 
     // Add tracks with optimized settings for low latency
     stream.getTracks().forEach(track => {
+      console.log('Adding track to peer connection:', {
+        kind: track.kind,
+        id: track.id,
+        readyState: track.readyState,
+        enabled: track.enabled,
+        muted: track.muted
+      })
       const sender = pc.addTrack(track, stream)
       
       // Configure video encoding parameters for low latency
@@ -164,12 +172,16 @@ export function Broadcaster({ streamId, onStart, onStop }: BroadcasterProps) {
       }
     }
 
-    // Create offer with low-latency preferences
-    const offer = await pc.createOffer({
-      offerToReceiveAudio: false,
-      offerToReceiveVideo: false,
-      voiceActivityDetection: false // Disable for lower latency
-    })
+    pc.onconnectionstatechange = () => {
+      console.log(`Broadcaster connection state for viewer ${viewerId}:`, pc.connectionState)
+    }
+
+    pc.oniceconnectionstatechange = () => {
+      console.log(`Broadcaster ICE connection state for viewer ${viewerId}:`, pc.iceConnectionState)
+    }
+
+    // Create offer
+    const offer = await pc.createOffer()
     await pc.setLocalDescription(offer)
 
     ws.send(JSON.stringify({
