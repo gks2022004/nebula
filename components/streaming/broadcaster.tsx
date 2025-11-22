@@ -28,14 +28,21 @@ export function Broadcaster({ streamId, onStart, onStop }: BroadcasterProps) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-          frameRate: { ideal: 30 }
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 30, max: 60 },
+          // Low latency settings
+          latency: { ideal: 0 },
+          // Prefer consistent quality over resolution
+          resizeMode: 'crop-and-scale'
         },
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true
+          autoGainControl: true,
+          // Low latency audio
+          latency: { ideal: 0 },
+          sampleRate: { ideal: 48000 }
         }
       })
 
@@ -113,18 +120,38 @@ export function Broadcaster({ streamId, onStart, onStop }: BroadcasterProps) {
     stream: MediaStream,
     ws: WebSocket
   ) => {
-    const configuration = {
+    const configuration: RTCConfiguration = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
-      ]
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' }
+      ],
+      // Optimize for low latency
+      iceTransportPolicy: 'all',
+      bundlePolicy: 'max-bundle',
+      rtcpMuxPolicy: 'require',
+      // ICE candidate pool for faster connection
+      iceCandidatePoolSize: 10
     }
 
     const pc = new RTCPeerConnection(configuration)
     peerConnections.current.set(viewerId, pc)
 
+    // Add tracks with optimized settings for low latency
     stream.getTracks().forEach(track => {
-      pc.addTrack(track, stream)
+      const sender = pc.addTrack(track, stream)
+      
+      // Configure video encoding parameters for low latency
+      if (track.kind === 'video') {
+        const parameters = sender.getParameters()
+        if (!parameters.encodings) {
+          parameters.encodings = [{}]
+        }
+        // Adaptive bitrate for better quality/latency balance
+        parameters.encodings[0].maxBitrate = 2500000 // 2.5 Mbps max
+        parameters.encodings[0].scaleResolutionDownBy = 1
+        sender.setParameters(parameters)
+      }
     })
 
     pc.onicecandidate = (event) => {
@@ -137,7 +164,12 @@ export function Broadcaster({ streamId, onStart, onStop }: BroadcasterProps) {
       }
     }
 
-    const offer = await pc.createOffer()
+    // Create offer with low-latency preferences
+    const offer = await pc.createOffer({
+      offerToReceiveAudio: false,
+      offerToReceiveVideo: false,
+      voiceActivityDetection: false // Disable for lower latency
+    })
     await pc.setLocalDescription(offer)
 
     ws.send(JSON.stringify({

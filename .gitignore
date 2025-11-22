@@ -53,3 +53,5 @@ prisma/migrations/dev.db
 PROJECT_SUMMARY.md
 QUICKSTART.md
 SETUP.md
+DEPLOYMENT.md
+LATENCY_OPTIMIZATION.md

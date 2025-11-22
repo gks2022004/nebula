@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"log"
+	"net"
 	"net/http"
 	"sync"
 
@@ -16,6 +17,12 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
+	// Optimize buffer sizes for low latency
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	// Enable compression can reduce bandwidth but adds latency
+	// Keep disabled for lowest latency
+	EnableCompression: false,
 }
 
 type Message struct {
@@ -92,7 +99,12 @@ func (s *SignalingServer) handleBroadcaster(w http.ResponseWriter, r *http.Reque
 		StreamID:      streamID,
 		Conn:          conn,
 		IsBroadcaster: true,
-		Send:          make(chan []byte, 256),
+		Send:          make(chan []byte, 512), // Increased buffer for high throughput
+	}
+	
+	// Set TCP_NODELAY for lower latency (disables Nagle's algorithm)
+	if tcpConn, ok := conn.UnderlyingConn().(*net.TCPConn); ok {
+		tcpConn.SetNoDelay(true)
 	}
 
 	room := s.getOrCreateRoom(streamID)
@@ -124,7 +136,12 @@ func (s *SignalingServer) handleViewer(w http.ResponseWriter, r *http.Request) {
 		StreamID:      streamID,
 		Conn:          conn,
 		IsBroadcaster: false,
-		Send:          make(chan []byte, 256),
+		Send:          make(chan []byte, 512), // Increased buffer for high throughput
+	}
+	
+	// Set TCP_NODELAY for lower latency
+	if tcpConn, ok := conn.UnderlyingConn().(*net.TCPConn); ok {
+		tcpConn.SetNoDelay(true)
 	}
 
 	room := s.getOrCreateRoom(streamID)
@@ -252,6 +269,9 @@ func (s *SignalingServer) writePump(client *Client) {
 	defer client.Conn.Close()
 
 	for message := range client.Send {
+		// Set write deadline for faster failure detection (reduces hanging)
+		// client.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+		
 		err := client.Conn.WriteMessage(websocket.TextMessage, message)
 		if err != nil {
 			break

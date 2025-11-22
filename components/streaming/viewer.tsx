@@ -61,11 +61,17 @@ export function Viewer({ streamId, viewerId }: ViewerProps) {
   }
 
   const handleOffer = async (sdp: RTCSessionDescriptionInit, ws: WebSocket) => {
-    const configuration = {
+    const configuration: RTCConfiguration = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
-      ]
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' }
+      ],
+      // Optimize for low latency
+      iceTransportPolicy: 'all',
+      bundlePolicy: 'max-bundle',
+      rtcpMuxPolicy: 'require',
+      iceCandidatePoolSize: 10
     }
 
     const pc = new RTCPeerConnection(configuration)
@@ -103,7 +109,9 @@ export function Viewer({ streamId, viewerId }: ViewerProps) {
 
     try {
       await pc.setRemoteDescription(new RTCSessionDescription(sdp))
-      const answer = await pc.createAnswer()
+      const answer = await pc.createAnswer({
+        voiceActivityDetection: false // Disable for lower latency
+      })
       await pc.setLocalDescription(answer)
 
       console.log('Sending answer to broadcaster')
@@ -162,7 +170,10 @@ export function Viewer({ streamId, viewerId }: ViewerProps) {
           ref={videoRef}
           autoPlay
           playsInline
+          muted={isMuted}
           className="w-full h-full object-cover"
+          // Optimize for low latency playback
+          style={{ objectFit: 'cover' }}
         />
         
         {isConnecting && (
