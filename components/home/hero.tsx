@@ -4,8 +4,14 @@ import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Video, Users, Zap, Shield, Star, Sparkles } from 'lucide-react'
 import Link from 'next/link'
+import { useSession } from 'next-auth/react'
 
 export function Hero() {
+  const { data: session } = useSession()
+  
+  // If logged in, go to dashboard. Otherwise, go to register
+  const streamingLink = session ? '/dashboard' : '/register'
+  
   return (
     <div className="relative overflow-hidden min-h-screen flex items-center">
       {/* Animated background shapes */}
@@ -62,10 +68,10 @@ export function Hero() {
             transition={{ delay: 0.7 }}
             className="flex flex-col sm:flex-row justify-center gap-6 mb-20"
           >
-            <Link href="/register">
+            <Link href={streamingLink}>
               <button className="neo-button px-12 py-6 text-xl flex items-center gap-3">
                 <Video className="w-6 h-6" />
-                START STREAMING
+                {session ? 'GO TO DASHBOARD' : 'START STREAMING'}
               </button>
             </Link>
             <Link href="/browse">
