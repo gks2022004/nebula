@@ -79,9 +79,9 @@ export function StreamCard({ stream }: StreamCardProps) {
               <div className="flex-shrink-0">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 p-[2px]">
                   <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-                    {stream.streamer?.image ? (
+                    {stream.streamer?.avatar ? (
                       <Image 
-                        src={stream.streamer.image} 
+                        src={stream.streamer.avatar} 
                         alt={stream.streamer.name || ''} 
                         width={40} 
                         height={40}

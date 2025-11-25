@@ -58,7 +58,7 @@ export function Navbar() {
   // Close mobile menu when route changes
   useEffect(() => {
     setIsMobileMenuOpen(false)
-  }, [window.location.pathname])
+  }, [])
 
   const unreadCount = notifications.filter(n => !n.read).length
 

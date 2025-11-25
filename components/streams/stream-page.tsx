@@ -164,8 +164,8 @@ export function StreamPage({ stream: initialStream }: StreamPageProps) {
               <div className="flex items-center gap-4">
                 <div className="relative">
                   <div className="w-16 h-16 rounded-full bg-gray-100 p-1 border-2 border-white shadow-lg overflow-hidden">
-                    {stream.streamer.image ? (
-                      <img src={stream.streamer.image} alt="" className="w-full h-full rounded-full object-cover" />
+                    {stream.streamer.avatar ? (
+                      <img src={stream.streamer.avatar} alt="" className="w-full h-full rounded-full object-cover" />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-ink-blue to-ink-purple flex items-center justify-center text-white font-bold text-xl">
                         {stream.streamer.name?.[0] || 'U'}
