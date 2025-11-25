@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"sync"
 
 	"github.com/gorilla/mux"
@@ -394,6 +395,12 @@ func main() {
 
 	handler := enableCORS(router)
 
-	log.Println("WebRTC Signaling Server started on :8080")
-	log.Fatal(http.ListenAndServe(":8080", handler))
+	// Use PORT from environment (Render provides this), default to 8080 for local dev
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	log.Printf("WebRTC Signaling Server started on :%s", port)
+	log.Fatal(http.ListenAndServe(":"+port, handler))
 }
