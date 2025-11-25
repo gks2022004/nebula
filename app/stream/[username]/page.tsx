@@ -18,7 +18,6 @@ export default async function StreamByUsernamePage({ params }: PageProps) {
     notFound();
   }
 
-  // Serialize dates for client component
   const serializedStream = {
     ...stream,
     createdAt: stream.createdAt.toISOString(),
@@ -27,5 +26,9 @@ export default async function StreamByUsernamePage({ params }: PageProps) {
     endedAt: stream.endedAt?.toISOString() || null,
   };
 
-  return <StreamPage stream={serializedStream as any} />;
+  return (
+    <div className="min-h-screen bg-[#faf6eb] py-8 px-4">
+      <StreamPage stream={serializedStream as any} />
+    </div>
+  );
 }

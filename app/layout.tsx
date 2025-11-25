@@ -5,7 +5,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: "NEBULA - Ultra-Low-Latency Live Streaming",
+  title: "NEBULA ✨ Live Streaming",
   description: "Stream beyond limits with WebRTC-powered real-time broadcasting • HD Quality • Interactive Chat",
 };
 
@@ -16,9 +16,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="font-mono" suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Patrick+Hand&family=Shadows+Into+Light&display=swap" rel="stylesheet" />
+      </head>
+      <body className="font-hand" suppressHydrationWarning>
         <Providers>
-          <div className="min-h-screen bg-[#0a0a0a]">
+          <div className="min-h-screen bg-transparent">
             <Navbar />
             <main>
               {children}

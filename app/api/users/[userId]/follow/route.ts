@@ -54,7 +54,7 @@ export async function POST(
         type: 'new_follower',
         title: 'New Follower',
         message: `${session.user?.name || 'Someone'} started following you`,
-        link: `/profile/${session.user?.id || ''}`
+        link: `/stream/${session.user?.username || ''}`
       }
     })
 

@@ -39,7 +39,6 @@ export default async function DashboardPage() {
     redirect('/')
   }
 
-  // Transform Prisma data to match TypeScript types (null -> undefined)
   const transformedStream: Stream & { streamer: User } = {
     id: stream.id,
     title: stream.title,
@@ -69,19 +68,23 @@ export default async function DashboardPage() {
     }
   }
 
-  return <DashboardContent 
-    stream={transformedStream} 
-    user={{
-      id: session.user.id,
-      username: session.user.username,
-      email: session.user.email || '',
-      name: session.user.name ?? undefined,
-      avatar: session.user.image ?? undefined,
-      bio: undefined,
-      isStreamer: session.user.isStreamer,
-      isModerator: session.user.isModerator,
-      isAdmin: session.user.isAdmin,
-      createdAt: new Date()
-    }} 
-  />
+  return (
+    <div className="min-h-screen bg-paper-bg py-8 px-4">
+      <DashboardContent 
+        stream={transformedStream} 
+        user={{
+          id: session.user.id,
+          username: session.user.username,
+          email: session.user.email || '',
+          name: session.user.name ?? undefined,
+          avatar: session.user.image ?? undefined,
+          bio: undefined,
+          isStreamer: session.user.isStreamer,
+          isModerator: session.user.isModerator,
+          isAdmin: session.user.isAdmin,
+          createdAt: new Date()
+        }} 
+      />
+    </div>
+  )
 }

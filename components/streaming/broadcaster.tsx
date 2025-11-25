@@ -1,7 +1,6 @@
 'use client'
 
 import { useRef, useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
 import { Video, VideoOff, Mic, MicOff, Settings } from 'lucide-react'
 
 interface BroadcasterProps {
@@ -46,7 +45,6 @@ export function Broadcaster({ streamId, onStart, onStop }: BroadcasterProps) {
         videoRef.current.srcObject = stream
       }
 
-      // Connect to signaling server BEFORE marking stream as live
       connectToSignalingServer(stream)
       
       setIsStreaming(true)
@@ -127,18 +125,15 @@ export function Broadcaster({ streamId, onStart, onStop }: BroadcasterProps) {
         { urls: 'stun:stun1.l.google.com:19302' },
         { urls: 'stun:stun2.l.google.com:19302' }
       ],
-      // Optimize for low latency
       iceTransportPolicy: 'all',
       bundlePolicy: 'max-bundle',
       rtcpMuxPolicy: 'require',
-      // ICE candidate pool for faster connection
       iceCandidatePoolSize: 10
     }
 
     const pc = new RTCPeerConnection(configuration)
     peerConnections.current.set(viewerId, pc)
 
-    // Add tracks with optimized settings for low latency
     stream.getTracks().forEach(track => {
       console.log('Adding track to peer connection:', {
         kind: track.kind,
@@ -149,14 +144,12 @@ export function Broadcaster({ streamId, onStart, onStop }: BroadcasterProps) {
       })
       const sender = pc.addTrack(track, stream)
       
-      // Configure video encoding parameters for low latency
       if (track.kind === 'video') {
         const parameters = sender.getParameters()
         if (!parameters.encodings) {
           parameters.encodings = [{}]
         }
-        // Adaptive bitrate for better quality/latency balance
-        parameters.encodings[0].maxBitrate = 2500000 // 2.5 Mbps max
+        parameters.encodings[0].maxBitrate = 2500000
         parameters.encodings[0].scaleResolutionDownBy = 1
         sender.setParameters(parameters)
       }
@@ -180,7 +173,6 @@ export function Broadcaster({ streamId, onStart, onStop }: BroadcasterProps) {
       console.log(`Broadcaster ICE connection state for viewer ${viewerId}:`, pc.iceConnectionState)
     }
 
-    // Create offer
     const offer = await pc.createOffer()
     await pc.setLocalDescription(offer)
 
@@ -234,8 +226,8 @@ export function Broadcaster({ streamId, onStart, onStop }: BroadcasterProps) {
   }
 
   return (
-    <div className="glass-dark rounded-xl overflow-hidden">
-      <div className="relative aspect-video bg-gray-900">
+    <div className="notebook-paper overflow-hidden">
+      <div className="relative aspect-video bg-paper-bg border-b-2 border-ink-black">
         <video
           ref={videoRef}
           autoPlay
@@ -244,52 +236,49 @@ export function Broadcaster({ streamId, onStart, onStop }: BroadcasterProps) {
           className="w-full h-full object-cover"
         />
         {!isStreaming && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Button
+          <div className="absolute inset-0 flex items-center justify-center bg-paper-bg/90">
+            <button
               onClick={startStreaming}
-              size="lg"
-              className="gradient-primary text-lg px-8"
+              className="hand-button hand-button-pink text-xl px-8 py-4 flex items-center"
             >
-              <Video className="mr-2 h-5 w-5" />
-              Start Broadcasting
-            </Button>
+              <Video className="mr-3 h-6 w-6" />
+              📹 Start Broadcasting
+            </button>
           </div>
         )}
       </div>
 
       {isStreaming && (
-        <div className="p-4 flex items-center justify-between bg-black/40">
-          <div className="flex items-center space-x-2">
-            <div className="flex items-center space-x-1 bg-red-600 px-3 py-1 rounded-full animate-pulse">
-              <div className="w-2 h-2 bg-white rounded-full" />
-              <span className="text-sm font-bold text-white">LIVE</span>
+        <div className="p-4 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="live-badge">
+              <span className="w-2 h-2 bg-white rounded-full mr-1" />
+              LIVE
             </div>
-            <span className="text-sm text-gray-300">
-              {peerConnections.current.size} viewers
+            <span className="text-ink font-bold">
+              👁️ {peerConnections.current.size} viewers
             </span>
           </div>
 
           <div className="flex items-center space-x-2">
-            <Button
+            <button
               onClick={toggleVideo}
-              size="icon"
-              variant={videoEnabled ? 'secondary' : 'destructive'}
+              className={`hand-button px-3 py-2 ${videoEnabled ? 'hand-button-blue' : 'hand-button-pink'}`}
             >
               {videoEnabled ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
-            </Button>
-            <Button
+            </button>
+            <button
               onClick={toggleAudio}
-              size="icon"
-              variant={audioEnabled ? 'secondary' : 'destructive'}
+              className={`hand-button px-3 py-2 ${audioEnabled ? 'hand-button-blue' : 'hand-button-pink'}`}
             >
               {audioEnabled ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
-            </Button>
-            <Button
+            </button>
+            <button
               onClick={stopStreaming}
-              variant="destructive"
+              className="hand-button hand-button-pink px-4 py-2"
             >
-              End Stream
-            </Button>
+              End Stream ✖️
+            </button>
           </div>
         </div>
       )}

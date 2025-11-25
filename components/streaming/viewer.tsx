@@ -2,7 +2,6 @@
 
 import { useRef, useEffect, useState } from 'react'
 import { Volume2, VolumeX, Maximize } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 
 interface ViewerProps {
   streamId: string
@@ -14,7 +13,7 @@ export function Viewer({ streamId, viewerId }: ViewerProps) {
   const [peerConnection, setPeerConnection] = useState<RTCPeerConnection | null>(null)
   const [isConnecting, setIsConnecting] = useState(true)
   const [isConnected, setIsConnected] = useState(false)
-  const [isMuted, setIsMuted] = useState(true) // Start muted for autoplay
+  const [isMuted, setIsMuted] = useState(true)
   const wsRef = useRef<WebSocket | null>(null)
   const hasReceivedOfferRef = useRef(false)
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -41,7 +40,6 @@ export function Viewer({ streamId, viewerId }: ViewerProps) {
       setIsConnecting(true)
       hasReceivedOfferRef.current = false
       
-      // Set a timeout to detect if we don't receive an offer within 10 seconds
       reconnectTimeoutRef.current = setTimeout(() => {
         if (!hasReceivedOfferRef.current) {
           console.log('No offer received within 10 seconds, broadcaster may not be ready')
@@ -87,7 +85,6 @@ export function Viewer({ streamId, viewerId }: ViewerProps) {
         { urls: 'stun:stun1.l.google.com:19302' },
         { urls: 'stun:stun2.l.google.com:19302' }
       ],
-      // Optimize for low latency
       iceTransportPolicy: 'all',
       bundlePolicy: 'max-bundle',
       rtcpMuxPolicy: 'require',
@@ -112,15 +109,12 @@ export function Viewer({ streamId, viewerId }: ViewerProps) {
         setIsConnecting(false)
         setIsConnected(true)
         
-        // Wait for video metadata to load before playing
-        // Start muted to comply with browser autoplay policies
         videoRef.current.onloadedmetadata = () => {
           if (videoRef.current) {
             videoRef.current.muted = true
             videoRef.current.play()
               .then(() => {
                 console.log('Video playing successfully')
-                // User can unmute using the controls
               })
               .catch(err => {
                 console.warn('Autoplay prevented, user interaction required:', err.message)
@@ -210,53 +204,52 @@ export function Viewer({ streamId, viewerId }: ViewerProps) {
   }
 
   return (
-    <div className="glass-dark rounded-xl overflow-hidden group relative">
-      <div className="relative aspect-video bg-gray-900">
+    <div className="notebook-paper overflow-hidden group relative">
+      <div className="relative aspect-video bg-paper-bg">
         <video
           ref={videoRef}
           autoPlay
           playsInline
           muted={isMuted}
           className="w-full h-full object-cover"
-          // Optimize for low latency playback
           style={{ objectFit: 'cover' }}
         />
         
         {isConnecting && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+          <div className="absolute inset-0 flex items-center justify-center bg-paper-bg/95">
             <div className="text-center">
-              <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-white">Connecting to stream...</p>
+              <div className="text-6xl mb-4 animate-bounce">📡</div>
+              <p className="text-ink font-bold text-xl">Connecting to stream...</p>
+              <p className="text-pencil mt-2">Please wait ✨</p>
             </div>
           </div>
         )}
 
         {!isConnected && !isConnecting && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+          <div className="absolute inset-0 flex items-center justify-center bg-paper-bg/95">
             <div className="text-center">
-              <p className="text-white text-lg mb-4">Stream is offline</p>
-              <Button onClick={connectToStream}>Retry</Button>
+              <div className="text-6xl mb-4">📺</div>
+              <p className="text-ink text-xl font-bold mb-4">Stream is offline</p>
+              <button onClick={connectToStream} className="hand-button hand-button-blue px-6 py-2">
+                🔄 Retry
+              </button>
             </div>
           </div>
         )}
 
         <div className="absolute bottom-4 right-4 flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button
+          <button
             onClick={toggleMute}
-            size="icon"
-            variant="secondary"
-            className="bg-black/50 hover:bg-black/70"
+            className="hand-button hand-button-yellow px-3 py-2"
           >
             {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-          </Button>
-          <Button
+          </button>
+          <button
             onClick={toggleFullscreen}
-            size="icon"
-            variant="secondary"
-            className="bg-black/50 hover:bg-black/70"
+            className="hand-button hand-button-blue px-3 py-2"
           >
             <Maximize className="h-4 w-4" />
-          </Button>
+          </button>
         </div>
       </div>
     </div>
